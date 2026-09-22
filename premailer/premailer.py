@@ -671,7 +671,12 @@ class Premailer(object):
                 lines.append("%s {%s}" % (k, make_important(v)))
             # media rule
             else:
-                for rule in item.cssRules:
+                pending = list(item.cssRules)
+                while pending:
+                    rule = pending.pop()
+                    if isinstance(rule, cssutils.css.CSSMediaRule):
+                        pending.extend(rule.cssRules)
+                        continue
                     if isinstance(
                         rule,
                         (
