@@ -208,7 +208,7 @@ class Premailer(object):
         """
 
         def format_css_property(prop):
-            if self.strip_important or prop.priority != "important":
+            if prop.priority != "important":
                 return "{0}:{1}".format(prop.name, prop.value)
             else:
                 return "{0}:{1} !important".format(prop.name, prop.value)
@@ -488,6 +488,7 @@ class Premailer(object):
                 element["style"],
                 element["classes"],
                 remove_unset_properties=self.remove_unset_properties,
+                strip_important=self.strip_important,
             )
             if final_style:
                 # final style could be empty string because of

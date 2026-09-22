@@ -30,13 +30,20 @@ def csstext_to_pairs(csstext, validate=True):
 csstext_to_pairs._lock = threading.RLock()
 
 
-def merge_styles(inline_style, new_styles, classes, remove_unset_properties=False):
+def merge_styles(
+    inline_style,
+    new_styles,
+    classes,
+    remove_unset_properties=False,
+    strip_important=False,
+):
     """
     This will merge all new styles where the order is important
     The last one will override the first
     When that is done it will apply old inline style again
-    The old inline style is always important and override
-    all new ones. The inline style must be valid.
+    Inline declarations override stylesheet declarations of equal importance.
+    Important stylesheet declarations still override normal inline declarations.
+    The inline style must be valid.
 
     Args:
         inline_style(str): the old inline style of the element if there
@@ -44,6 +51,7 @@ def merge_styles(inline_style, new_styles, classes, remove_unset_properties=Fals
         new_styles: a list of new styles, each element should be
             a list of tuple
         classes: a list of classes which maps new_styles, important!
+        strip_important(bool): Remove priority annotations after resolving the cascade
         remove_unset_properties(bool): Allow us to remove certain CSS
             properties with rules that set their value to 'unset'
 
@@ -59,12 +67,15 @@ def merge_styles(inline_style, new_styles, classes, remove_unset_properties=Fals
         for k, v in style:
             styles[classes[i]][k] = v
 
-    # keep always the old inline style
+    # Inline specificity wins only when importance is equal.
     if inline_style:
         # inline should be a declaration list as I understand
         # ie property-name:property-value;...
         for k, v in csstext_to_pairs(inline_style):
-            styles[""][k] = v
+            if v.endswith(" !important") or not styles[""].get(k, "").endswith(
+                " !important"
+            ):
+                styles[""][k] = v
 
     normal_styles = []
     pseudo_styles = []
@@ -78,6 +89,11 @@ def merge_styles(inline_style, new_styles, classes, remove_unset_properties=Fals
             )
         if not kv:
             continue
+        if strip_important:
+            kv = OrderedDict(
+                (k, v[: -len(" !important")] if v.endswith(" !important") else v)
+                for k, v in kv.items()
+            )
         if pseudoclass:
             pseudo_styles.append(
                 "%s{%s}"
