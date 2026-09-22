@@ -80,6 +80,11 @@ def merge_styles(
     normal_styles = []
     pseudo_styles = []
     for pseudoclass, kv in styles.items():
+        if strip_important:
+            kv = OrderedDict(
+                (k, v[: -len(" !important")] if v.endswith(" !important") else v)
+                for k, v in kv.items()
+            )
         if remove_unset_properties:
             # Remove rules that we were going to have value 'unset' because
             # they effectively are the same as not saying anything about the
@@ -89,11 +94,6 @@ def merge_styles(
             )
         if not kv:
             continue
-        if strip_important:
-            kv = OrderedDict(
-                (k, v[: -len(" !important")] if v.endswith(" !important") else v)
-                for k, v in kv.items()
-            )
         if pseudoclass:
             pseudo_styles.append(
                 "%s{%s}"

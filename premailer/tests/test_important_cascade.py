@@ -34,3 +34,9 @@ class ImportantCascadeTests(unittest.TestCase):
         result = html.fromstring(transform(document))
         style = cssutils.parseStyle(result.find("body/p").get("style"))
         self.assertEqual(style.getPropertyValue("font-family"), '" !important"')
+
+    def test_important_unset_can_still_be_removed(self):
+        document = """<html><head><style>p {color: unset !important;}</style></head>
+        <body><p>hello</p></body></html>"""
+        result = html.fromstring(transform(document, remove_unset_properties=True))
+        self.assertIsNone(result.find("body/p").get("style"))
