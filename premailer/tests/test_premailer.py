@@ -8,6 +8,7 @@ from io import StringIO
 import tempfile
 
 from lxml.etree import XMLSyntaxError, fromstring
+from lxml import etree
 from requests.exceptions import HTTPError
 import mock
 import premailer.premailer  # lint:ok
@@ -3063,16 +3064,13 @@ sheet" type="text/css">
 </html>
 """
 
-        expected_neglected_html = """
-<html>
-    <head>
-    </head>
-    <body>
-    <img src="%7B%7B%20data%20%7C%20default:%20'Test%20&amp;%20&lt;code&gt;'%20%7D%7D">
-    <a href="%7B%7B%20data%20%7C%20default:%20" test>" }}"&gt;</a>
-    </body>
-</html>
-"""
+        # Without preservation, serialization is deliberately left to lxml.
+        # lxml 5+ leaves braces literal, while older versions percent-encode them.
+        # Compare with the dependency's unmodified HTML serialization in either case.
+        parsed = etree.HTML(html)
+        parsed.insert(0, etree.Element("head"))
+        expected_neglected_html = etree.tostring(parsed, method="html").decode("utf-8")
+
         p = Premailer(html, preserve_handlebar_syntax=True)
         result_preserved_html = p.transform()
         compare_html(expected_preserved_html, result_preserved_html)

@@ -563,8 +563,8 @@ class Premailer(object):
             # attributes, with their single-character equivalents.
             if self.preserve_handlebar_syntax:
                 out = re.sub(
-                    r'="%7B%7B(.+?)%7D%7D"',
-                    lambda match: '="{{' + unescape(unquote(match.groups()[0])) + '}}"',
+                    r"""=(["'])(?:%7B%7B|{{)(.+?)(?:%7D%7D|}})\1""",
+                    lambda match: '="{{' + unescape(unquote(match.groups()[1])) + '}}"',
                     out,
                 )
             return out
