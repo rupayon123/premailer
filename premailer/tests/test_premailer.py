@@ -2030,6 +2030,43 @@ ation/rss+xml" title="RSS" href="/rss.xml">
 
         compare_html(expect_html, result_html)
 
+    @mock.patch.object(Premailer, "_load_external_url")
+    def test_local_stylesheet_with_network_disabled(self, mocked_load_url):
+        with tempfile.TemporaryDirectory() as base_path:
+            with open(os.path.join(base_path, "local.css"), "w") as css_file:
+                css_file.write("h1 { color: red; }")
+            html = (
+                '<link rel="stylesheet" href="local.css">'
+                '<link rel="stylesheet" href="https://example.com/remote.css">'
+                '<link rel="stylesheet" href="missing.css">'
+                "<h1>Heading</h1>"
+            )
+            result = Premailer(
+                html,
+                base_path=base_path,
+                base_url="https://example.com/",
+                allow_network=False,
+                allow_loading_external_files=True,
+            ).transform()
+        self.assertIn('style="color:red"', result)
+        self.assertIn("https://example.com/remote.css", result)
+        mocked_load_url.assert_not_called()
+
+    @mock.patch.object(Premailer, "_load_external_url")
+    def test_local_external_styles_with_network_disabled(self, mocked_load_url):
+        with tempfile.TemporaryDirectory() as base_path:
+            with open(os.path.join(base_path, "local.css"), "w") as css_file:
+                css_file.write("h1 { color: red; }")
+            result = Premailer(
+                "<h1>Heading</h1>",
+                base_path=base_path,
+                external_styles=["local.css", "https://example.com/remote.css"],
+                allow_network=False,
+                allow_loading_external_files=True,
+            ).transform()
+        self.assertIn('style="color:red"', result)
+        mocked_load_url.assert_not_called()
+
     def test_external_links_unfindable(self):
         """Test loading stylesheets that can't be found"""
 

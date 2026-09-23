@@ -370,7 +370,7 @@ class Premailer(object):
         index = 0
 
         cssselector = ["style"]
-        if self.allow_network:
+        if self.allow_network or self.allow_loading_external_files:
             cssselector.append("link[rel~=stylesheet]")
         for element in _create_cssselector(",".join(cssselector))(page):
             # If we have a media attribute whose value is anything other than
@@ -395,6 +395,8 @@ class Premailer(object):
                 css_body = element.text
             else:
                 href = element.attrib.get("href")
+                if not self._can_load_stylesheet(href):
+                    continue
                 css_body = self._load_external(href)
 
             these_rules, these_leftover = self._parse_style_rules(css_body, index)
@@ -427,8 +429,10 @@ class Premailer(object):
                 parent_of_element.remove(element)
 
         # external style files
-        if self.external_styles and self.allow_network:
+        if self.external_styles:
             for stylefile in self.external_styles:
+                if not self._can_load_stylesheet(stylefile):
+                    continue
                 css_body = self._load_external(stylefile)
                 self._process_css_text(css_body, index, rules, head)
                 index += 1
@@ -569,6 +573,19 @@ class Premailer(object):
                 )
             return out
 
+    def _can_load_stylesheet(self, url):
+        if not url:
+            return False
+        if self.allow_network:
+            return True
+        if not self.allow_loading_external_files or url.startswith("//"):
+            return False
+        if url.startswith(("http://", "https://")):
+            return False
+        base_path = os.path.abspath(self.base_path or os.curdir)
+        stylefile = url if os.path.isabs(url) else os.path.join(base_path, url)
+        return os.path.isfile(stylefile)
+
     def _load_external_url(self, url):
         response = self.session.get(url, verify=not self.allow_insecure_ssl)
         response.raise_for_status()
@@ -584,6 +601,12 @@ class Premailer(object):
                 url = "http:" + url
 
         if url.startswith("http://") or url.startswith("https://"):
+            if not self.allow_network:
+                raise ExternalFileLoadingError(
+                    "Unable to load external URL {!r} because network access is disabled".format(
+                        url
+                    )
+                )
             css_body = self._load_external_url(url)
         elif not self.allow_loading_external_files:
             raise ExternalFileLoadingError(
@@ -598,7 +621,7 @@ class Premailer(object):
             if os.path.exists(stylefile):
                 with codecs.open(stylefile, encoding="utf-8") as f:
                     css_body = f.read()
-            elif self.base_url:
+            elif self.base_url and self.allow_network:
                 url = urljoin(self.base_url, url)
                 return self._load_external(url)
             else:
