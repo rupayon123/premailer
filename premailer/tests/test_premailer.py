@@ -2114,7 +2114,7 @@ ent:"" !important;display:block !important}
         p = premailer.premailer.Premailer("<p>A paragraph</p>")
         r = p._load_external_url(faux_uri)
 
-        mocked_requests.get.assert_called_once_with(faux_uri, verify=True)
+        mocked_requests.get.assert_called_once_with(faux_uri, verify=True, timeout=10)
         eq_(faux_response, r)
 
     def test_load_external_url_with_custom_session(self):
@@ -2125,7 +2125,7 @@ ent:"" !important;display:block !important}
         p = premailer.premailer.Premailer("<p>A paragraph</p>", session=mocked_session)
         r = p._load_external_url(faux_uri)
 
-        mocked_session.get.assert_called_once_with(faux_uri, verify=True)
+        mocked_session.get.assert_called_once_with(faux_uri, verify=True, timeout=10)
         eq_(faux_response, r)
 
     @mock.patch("premailer.premailer.requests")
@@ -2139,7 +2139,7 @@ ent:"" !important;display:block !important}
         )
         r = p._load_external_url(faux_uri)
 
-        mocked_requests.get.assert_called_once_with(faux_uri, verify=True)
+        mocked_requests.get.assert_called_once_with(faux_uri, verify=True, timeout=10)
         eq_(faux_response, r)
 
     @mock.patch("premailer.premailer.requests")
@@ -2151,8 +2151,19 @@ ent:"" !important;display:block !important}
         p = premailer.premailer.Premailer("<p>A paragraph</p>", allow_insecure_ssl=True)
         r = p._load_external_url(faux_uri)
 
-        mocked_requests.get.assert_called_once_with(faux_uri, verify=False)
+        mocked_requests.get.assert_called_once_with(faux_uri, verify=False, timeout=10)
         eq_(faux_response, r)
+
+    def test_load_external_url_custom_timeout(self):
+        mocked_session = mock.MagicMock()
+        mocked_session.get.return_value = MockResponse("css")
+        p = premailer.premailer.Premailer(
+            "<p>A paragraph</p>", session=mocked_session, external_timeout=2.5
+        )
+        assert p._load_external_url("https://example.com/site.css") == "css"
+        mocked_session.get.assert_called_once_with(
+            "https://example.com/site.css", verify=True, timeout=2.5
+        )
 
     @mock.patch("premailer.premailer.requests")
     def test_load_external_url_404(self, mocked_requests):

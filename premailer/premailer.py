@@ -141,6 +141,7 @@ class Premailer(object):
         allow_insecure_ssl=False,
         allow_loading_external_files=False,
         session=None,
+        external_timeout=10,
     ):
         self.html = html
         self.base_url = base_url
@@ -187,6 +188,7 @@ class Premailer(object):
         self.allow_insecure_ssl = allow_insecure_ssl
         self.allow_loading_external_files = allow_loading_external_files
         self.session = session or requests
+        self.external_timeout = external_timeout
 
         if cssutils_logging_handler:
             cssutils.log.addHandler(cssutils_logging_handler)
@@ -570,7 +572,9 @@ class Premailer(object):
             return out
 
     def _load_external_url(self, url):
-        response = self.session.get(url, verify=not self.allow_insecure_ssl)
+        response = self.session.get(
+            url, verify=not self.allow_insecure_ssl, timeout=self.external_timeout
+        )
         response.raise_for_status()
         return response.text
 
