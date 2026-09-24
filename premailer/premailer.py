@@ -664,6 +664,17 @@ class Premailer(object):
 
     def _css_rules_to_string(self, rules):
         """given a list of css rules returns a css string"""
+        def make_rule_important(rule):
+            if hasattr(rule, "style"):
+                for key in rule.style.keys():
+                    rule.style[key] = (
+                        rule.style.getPropertyValue(key, False),
+                        "!important",
+                    )
+            elif hasattr(rule, "cssRules"):
+                for nested_rule in rule.cssRules:
+                    make_rule_important(nested_rule)
+
         lines = []
         for item in rules:
             if isinstance(item, tuple):
@@ -671,20 +682,7 @@ class Premailer(object):
                 lines.append("%s {%s}" % (k, make_important(v)))
             # media rule
             else:
-                for rule in item.cssRules:
-                    if isinstance(
-                        rule,
-                        (
-                            cssutils.css.csscomment.CSSComment,
-                            cssutils.css.cssunknownrule.CSSUnknownRule,
-                        ),
-                    ):
-                        continue
-                    for key in rule.style.keys():
-                        rule.style[key] = (
-                            rule.style.getPropertyValue(key, False),
-                            "!important",
-                        )
+                make_rule_important(item)
                 lines.append(item.cssText)
         return "\n".join(lines)
 

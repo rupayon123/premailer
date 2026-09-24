@@ -1233,6 +1233,24 @@ b
 
         compare_html(expect_html, result_html)
 
+    def test_nested_media_queries_remain_in_leftover_css(self):
+        html = """<html><head><style>
+        @media (prefers-color-scheme: dark) {
+            .textPrimary { color: #e2e2e2; }
+            @media (max-width: 630px) {
+                body { background-color: #1e1e1e; }
+            }
+        }
+        </style></head><body><p class="textPrimary">Hello</p></body></html>"""
+
+        result = fromstring(transform(html, pretty_print=False, strip_important=False))
+        css = result.xpath("//style")[0].text
+        self.assertIn("@media (prefers-color-scheme: dark)", css)
+        self.assertIn("@media (max-width: 630px)", css)
+        self.assertIn("color: #e2e2e2 !important", css)
+        self.assertIn("background-color: #1e1e1e !important", css)
+        self.assertNotIn("style", result.xpath("//p")[0].attrib)
+
     def test_child_selector(self):
         html = """<html>
         <head>
